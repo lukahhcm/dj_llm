@@ -1,0 +1,2 @@
+/mnt/data/shared/qwen# ls
+Qwen2.5-3B-Instruct  Qwen2.5-7B-Instruct  Qwen3-1.7B-Base  Qwen3-30B-A3B-Instruct-2507  Qwen3-32B  Qwen3-4B-Base  Qwen3-4B-Instruct-2507  Qwen3-8B
