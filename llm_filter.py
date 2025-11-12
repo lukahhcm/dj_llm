@@ -3,19 +3,19 @@
 使用示例:
 对文本进行打分与筛选:
    python llm_filter.py \
-     --dataset ./data/test_data/test.jsonl \
-     --output ./data/results/llm/test_results.jsonl \
+     --dataset ../data/test_data/test.jsonl \
+     --output ../data/results/llm/test_results.jsonl \
      --model /mnt/data/shared/qwen/Qwen3-32B \
      --model-type vllm \
-     --user-request-file ./data/user_request.jsonl \
+     --user-request-file ../data/user_request.jsonl \
      --gpu 0-7
 
     python llm_filter.py \
-     --dataset ./data/test_data/test_cc_100.jsonl \
-     --output ./data/results/llm/test_cc_100_results.jsonl \
+     --dataset ../data/test_data/test_cc_100.jsonl \
+     --output ../data/results/llm/test_cc_100_results.jsonl \
      --model /mnt/data/shared/qwen/Qwen3-32B \
      --model-type vllm \
-     --user-request-file ./data/user_request.jsonl \
+     --user-request-file ../data/user_request.jsonl \
      --gpu 0-7
 
 输出格式:
