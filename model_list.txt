@@ -1,2 +1,39 @@
 /mnt/data/shared/qwen# ls
 Qwen2.5-3B-Instruct  Qwen2.5-7B-Instruct  Qwen3-1.7B-Base  Qwen3-30B-A3B-Instruct-2507  Qwen3-32B  Qwen3-4B-Base  Qwen3-4B-Instruct-2507  Qwen3-8B
+
+
+python llm_batch_filter.py \
+        --dataset ../dj_llm_data/test_data/test_cc_100.jsonl \
+        --output ../dj_llm_data/results/test_cc_100_qwen_32b_batch_1.jsonl \
+        --model /mnt/data/shared/qwen/Qwen3-32B \
+        --model-type vllm \
+        --user-request-file ./user_request_length.jsonl \
+        --gpu 0-7 \
+        --batch-size 1
+
+python llm_batch_filter.py \
+        --dataset ../dj_llm_data/test_data/test_cc_100.jsonl \
+        --output ../dj_llm_data/results/test_cc_100_qwen_32b_batch_2.jsonl \
+        --model /mnt/data/shared/qwen/Qwen3-32B \
+        --model-type vllm \
+        --user-request-file ./user_request_length.jsonl \
+        --gpu 0-7 \
+        --batch-size 2
+
+python llm_batch_filter.py \
+        --dataset ../dj_llm_data/test_data/test_cc_100.jsonl \
+        --output ../dj_llm_data/results/test_cc_100_qwen_32b_batch_3.jsonl \
+        --model /mnt/data/shared/qwen/Qwen3-32B \
+        --model-type vllm \
+        --user-request-file ./user_request_length.jsonl \
+        --gpu 0-7 \
+        --batch-size 3
+
+python llm_batch_filter.py \
+        --dataset ../dj_llm_data/test_data/test_cc_100.jsonl \
+        --output ../dj_llm_data/results/test_cc_100_qwen_32b_batch_5.jsonl \
+        --model /mnt/data/shared/qwen/Qwen3-32B \
+        --model-type vllm \
+        --user-request-file ./user_request_length.jsonl \
+        --gpu 0-7 \
+        --batch-size 5
