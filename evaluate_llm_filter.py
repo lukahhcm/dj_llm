@@ -11,6 +11,7 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 
@@ -233,11 +234,15 @@ def main() -> None:
         return
 
     overall_records: List[Tuple[int, int, Optional[float]]] = []
+    per_group_outputs = []
     for key, records in groups.items():
         overall_records.extend(records)
         metrics = summarize_group(records, args.score_threshold)
         operator, level = key
         print(f"\n=== operator={operator} | level={level} ===")
+        per_group_outputs.append(
+            {"operator": operator, "level": level, **metrics}
+        )
         for metric_name, value in metrics.items():
             if value is None:
                 print(f"{metric_name:>26}: N/A")
@@ -260,6 +265,21 @@ def main() -> None:
 
     if skipped:
         print(f"\nSkipped samples (parse/lookup issues): {skipped}")
+
+    pred_path = Path(args.pred_file).resolve()
+    eval_dir = pred_path.parent / "evaluation"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    output_path = eval_dir / f"{pred_path.stem}_evaluation.json"
+    summary = {
+        "pred_file": str(pred_path),
+        "score_threshold": args.score_threshold,
+        "per_group": per_group_outputs,
+        "overall": overall_metrics,
+        "skipped_samples": skipped,
+    }
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+    print(f"\nSaved evaluation summary to {output_path}")
 
 
 if __name__ == "__main__":
