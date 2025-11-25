@@ -20,6 +20,7 @@ import sys
 import json
 import argparse
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import re
@@ -38,6 +39,7 @@ def get_gpu_arg():
 
 # Set CUDA_VISIBLE_DEVICES before importing torch
 gpu_str = get_gpu_arg()
+gpu_env_message = None
 if gpu_str:
     # Parse GPU IDs (e.g., '0-7' or '0,1,2,3')
     gpu_ids = []
@@ -48,9 +50,18 @@ if gpu_str:
         else:
             gpu_ids.append(int(part))
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, gpu_ids))
-    print(f"Setting CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+    gpu_env_message = f"Setting CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}"
 
 from loguru import logger
+
+# LOG_DIR = Path(__file__).parent / "logs"
+# LOG_DIR.mkdir(parents=True, exist_ok=True)
+# log_file_path = LOG_DIR / f"llm_batch_filter_{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+# logger.add(log_file_path, encoding="utf-8", enqueue=True)
+# logger.info(f"Logging to {log_file_path}")
+
+# if gpu_env_message:
+#     logger.info(gpu_env_message)
 
 # Add data-juicer to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "data-juicer"))
@@ -631,52 +642,21 @@ def main():
             user_content_parts = []
             for idx, sample in enumerate(batch_samples, 1):
                 input_text = sample.get("text", "")
-                user_content_parts.append(f"<text id=\"{idx}\">\n{input_text}\n</text>")
+                user_content_parts.append(f"<text id=\"{idx+1}\">\n{input_text}\n</text>")
 
             combined_user_content = "\n".join(user_content_parts)
 
-            # # 构建系统提示
-            # system_prompt = (
-            #     "You are an experienced text processing expert. Carefully analyze each input text sample according to the given user request. "
-            #     "For each text, provide:\n"
-            #     "1. A single overall score (a floating-point number from 0 to 10, where higher values indicate better quality)\n"
-            #     "2. A retention decision: \"KEEP\" or \"REMOVE\"\n\n"
-            #     "Output exactly one line per input text, with the format: <score> <KEEP/REMOVE>\n"
-            #     "Keep the output order same as input texts.\n\n"
-            #     "The user request on text processing is:\n"
-            #     f"{user_request}\n\n"
-            #     "The input texts are:\n"
-            #     f"{combined_user_content}\n\n"
-            #     "Output your analysis below (one line per text):\n"
-            #     "/no_think"
-            # )
-
-            # # 构建系统提示
-            # system_prompt = (
-            #     "You are an experienced text processing expert. Carefully analyze each input text sample according to the given user request. "
-            #     "For each text, provide:\n"
-            #     "1. A single overall score (a floating-point number from 0 to 10, where higher values indicate better quality)\n"
-            #     "2. A retention decision: \"KEEP\" or \"REMOVE\"\n\n"
-            #     "Output exactly one line per input text, with the format: <result id=\"X\"><score>SCORE</score><decision>KEEP/REMOVE</decision></result>\n"
-            #     "Keep the output order same as input texts.\n\n"
-            #     "The user request on text processing is:\n"
-            #     f"{user_request}\n\n"
-            #     "/no_think"
-            # )
-
-            # # 构建用户内容，包含所有待处理的文本
-            # user_content = (
-            #     "The input texts are:\n"
-            #     f"{combined_user_content}\n\n"
-            #     "Output your analysis below (one line per text):\n"
-            # )
-
-            # 修改系统提示部分
             system_prompt = (
-                "You are an experienced text processing expert. Carefully analyze each input text sample according to the given user request.\n\n"
-                "For each text, provide:\n"
-                "1. A single overall score (a floating-point number from 0 to 10, where higher values indicate better quality)\n"
-                "2. A retention decision: \"KEEP\" or \"REMOVE\"\n\n"
+                "You are an experienced text processing expert. Your task is to evaluate each input text sample according to the user's specific processing request\n\n"
+
+                "You will be given:\n"
+                "1. A user request that describes what kind of texts are acceptable. This may be a concrete instruction or a more general goal.\n"
+                "2. A list of input texts, numbered sequentially starting from 1.\n\n"
+                
+                "For each text, you should provide:\n"
+                "1. A single overall score (a float from 0.0 to 10.0) reflecting how well the text satisfies the user's request—higher scores indicate better alignment.\n"
+                "2. A retention decision: \"KEEP\" if the text meets the user's criteria, or \"REMOVE\" otherwise.\n\n"
+
                 "IMPORTANT OUTPUT FORMAT:\n"
                 "Output EXACTLY ONE line per input text in this format:\n"
                 "<result id=\"ID\"><score>SCORE</score><decision>DECISION</decision></result>\n\n"
@@ -684,15 +664,16 @@ def main():
                 "- ID: the text ID (1, 2, 3, etc., matching the input order)\n"
                 "- SCORE: a floating-point number from 0 to 10\n"
                 "- DECISION: either KEEP or REMOVE\n\n"
+
                 "Example output format:\n"
                 "<result id=\"1\"><score>8.5</score><decision>KEEP</decision></result>\n"
                 "<result id=\"2\"><score>3.2</score><decision>REMOVE</decision></result>\n\n"
                 "Keep the output order same as input texts. Do not output anything else.\n\n"
-                "The user request on text processing is:\n"
-                f"{user_request}\n\n"
             )
 
             user_content = (
+                "The user request on text processing is:\n"
+                f"{user_request}\n\n"
                 "The input texts are:\n\n"
                 f"{combined_user_content}\n\n"
                 "Now output your analysis (one result line per text):\n"
@@ -703,6 +684,10 @@ def main():
             # 一次LLM调用处理整个batch
             raw_output, inference_time = processor.generate_response_batch(system_prompt, user_content)
             inference_times.append(inference_time)
+            logger.info(
+                f"    Inference time: {inference_time:.4f}s "
+                f"(batch_size={batch_size})"
+            )
             
             # 解析批量输出
             batch_results = parse_batch_filter_output(raw_output, batch_size)
